@@ -1,43 +1,90 @@
 # VRC Toolbox
 
-VRC Toolbox is a Windows desktop app for controlling selected VRChat features through OSC. It is built with Tauri 2, React, TypeScript, and Rust.
+this project was almost AI generated.
 
-## Features
+👇**AI**💻**Generated**👇
 
-- **Chatbox:** Compose and send messages, add emoji, browse recent messages, and save reusable templates.
-- **Repeating messages:** Select saved templates to send as a repeating sequence, and stop the sequence at any time.
-- **Avatar height:** Set your avatar's eye-height value and save local shortcuts for frequently used values.
-- **OSC settings:** Configure the OSC target and see the connection status from the app.
+VRC Toolbox is a small Windows desktop app that helps you control common VRChat features without leaving the desktop.
 
-Chatbox history, templates, settings, and avatar-height shortcuts are stored locally in the app configuration directory. The browser preview is useful for exploring the interface, but OSC actions require the desktop app.
+It uses VRChat's OSC connection to send chatbox messages and avatar eye-height changes from one simple interface.
 
-## Requirements
+## What you can do
+
+- **Send chatbox messages** to VRChat using OSC.
+- **Reuse recent messages** and keep frequently used text as templates.
+- **Repeat saved messages** in order, then stop them at any time.
+- **Change avatar eye height** and save your preferred height values for quick reuse.
+- **Check the OSC connection** and adjust the local OSC target if needed.
+
+Your messages, templates, settings, and saved height values stay on this device.
+
+## Download and install
+
+1. Open the [latest release](https://github.com/RichardLexJiang/vrc-toolbox/releases/latest).
+2. Download the Windows MSI or NSIS installer from the release's **Assets** section.
+3. Run the installer and open VRC Toolbox.
+4. Start VRChat and make sure OSC is enabled.
+
+The app uses the standard local OSC address, `127.0.0.1:9000`, by default. If your VRChat setup uses another address or port, open **Settings** in VRC Toolbox and update the OSC target.
+
+## Using VRC Toolbox
+
+### Chatbox
+
+Write a message of up to 144 characters and click **Send message**. Press **Shift+Enter** as a shortcut when composing.
+
+Recent messages appear in the history panel. Selecting one puts it back in the composer without sending it automatically.
+
+To repeat messages:
+
+1. Create or save one or more templates.
+2. Select the templates you want to repeat.
+3. Click **Repeat selected**.
+4. Click **Stop** when you are finished.
+
+### Avatar height
+
+Enter an avatar eye-height value from `0.01` to `100`, then click **Apply**. You can also save a value and apply it again later from your saved shortcuts.
+
+### Settings
+
+Use **Settings** to view the OSC connection status and change the OSC target. The default VRChat address is usually correct and does not need to be changed.
+
+## Troubleshooting
+
+- **Messages are not appearing in VRChat:** Confirm that VRChat is running, OSC is enabled, and VRC Toolbox shows a connection. Check that the OSC target in **Settings** matches your VRChat setup.
+- **The Avatar page does not respond:** Make sure an avatar is loaded and OSC is enabled in VRChat.
+- **Nothing works in the browser preview:** The browser preview can show the interface, but OSC commands require the Windows desktop app.
+
+## For developers
+
+VRC Toolbox is built with Tauri 2, React, TypeScript, Rust, Vite, and pnpm.
+
+### Requirements
 
 - Windows 10 or later
 - Node.js 22
 - pnpm 10
-- Rust stable toolchain
-- Microsoft C++ Build Tools and the WebView2 Runtime (normally available on Windows)
+- Rust stable
+- Microsoft C++ Build Tools
+- WebView2 Runtime
 
-## Development
-
-Install the JavaScript dependencies:
+### Set up the project
 
 ```powershell
 pnpm install
+pnpm tauri dev
 ```
 
-Run the frontend in a browser:
+To preview the interface in a browser:
 
 ```powershell
 pnpm dev
 ```
 
-Run the desktop app during development:
+The browser preview is useful for UI work, but it cannot send OSC commands.
 
-```powershell
-pnpm tauri dev
-```
+### Build the app
 
 Build and type-check the frontend:
 
@@ -51,18 +98,7 @@ Build the Windows desktop app and installers:
 pnpm tauri build
 ```
 
-The MSI and NSIS installers are generated under `src-tauri/target/release/bundle/`.
-
-## GitHub Actions
-
-The workflow in `.github/workflows/build.yml` builds the Windows desktop app when manually run or when a version tag starting with `v` is pushed. Manual runs upload the generated MSI and NSIS installers as the `vrc-toolbox-windows-installers` workflow artifact. Pushing a version tag also creates a GitHub Release with generated release notes and attaches both installers.
-
-To publish a release, push a tag such as `v0.1.0`:
-
-```powershell
-git tag v0.1.0
-git push origin v0.1.0
-```
+The Windows MSI and NSIS installers are generated under `src-tauri/target/release/bundle/`.
 
 ## Project documentation
 
@@ -71,7 +107,7 @@ git push origin v0.1.0
 
 ## App icon
 
-The source icon is `public/app-icon.svg`. After editing it, regenerate the native Tauri icons with:
+The source icon is [`public/app-icon.svg`](public/app-icon.svg). After editing it, regenerate the Tauri icons with:
 
 ```powershell
 pnpm tauri icon public/app-icon.svg
