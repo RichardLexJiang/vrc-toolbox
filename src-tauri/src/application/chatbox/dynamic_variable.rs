@@ -6,6 +6,19 @@ use crate::{
     domain::{chatbox::DynamicVariableDescription, error::IResult},
 };
 
+pub fn supported_dynamic_var_list() -> Vec<DynamicVariableDescription> {
+    DynamicVariable::SUPPORTED
+        .into_iter()
+        .map(|variable| {
+            DynamicVariableDescription::new(
+                format!("${{{}}}", variable.key()),
+                variable.example_value(),
+                variable.description(),
+            )
+        })
+        .collect()
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DynamicVariable {
     CpuUsage,
@@ -55,22 +68,9 @@ impl DynamicVariable {
             Self::MemoryPercentUsage => {
                 "Used physical memory as a percentage of total RAM.".to_string()
             }
-            Self::LocalTime(_) => "Current local time in 24-hour HH:mm format.".to_string(),
+            Self::LocalTime(_) => "Current local time in the format you want, example format: ${local_time:%Y-%m-%d %H:%M:%S}".to_string(),
         }
     }
-}
-
-pub fn supported_dynamic_var_list() -> Vec<DynamicVariableDescription> {
-    DynamicVariable::SUPPORTED
-        .into_iter()
-        .map(|variable| {
-            DynamicVariableDescription::new(
-                format!("${{{}}}", variable.key()),
-                variable.example_value(),
-                variable.description(),
-            )
-        })
-        .collect()
 }
 
 #[cfg(test)]
