@@ -10,16 +10,13 @@ use std::{
 use tauri::{AppHandle, Emitter};
 
 use crate::{
-    adapters::file_system,
-    application::chatbox::message::{CHATBOX_MAX_LENGTH, send_message},
+    application::chatbox::message::send_message,
     domain::{
-        chatbox::{ChatboxTemplateDto, RepeatController, RepeatStatus, RepeatTaskInfo},
+        chatbox::{RepeatController, RepeatStatus, RepeatTaskInfo},
         error::{IError, IResult},
     },
 };
 
-const TEMPLATE_LIST_FILE: &str = "template_list.json";
-const TEMPLATE_MAX_SIZE: usize = 20;
 const REPEAT_STATUS_EVENT: &str = "chatbox-repeat-status";
 
 static REPEATING_CONTROLLER: OnceLock<Arc<Mutex<RepeatController>>> = OnceLock::new();
@@ -39,9 +36,9 @@ pub fn start_repeating(app: AppHandle, mut messages: Vec<String>) -> IResult<Rep
 
     for message in &mut messages {
         *message = message.trim().to_string();
-        if message.is_empty() || message.chars().count() > CHATBOX_MAX_LENGTH {
+        if message.is_empty() {
             return Err(IError::Chatbox(format!(
-                "repeat message must contain between 1 and {CHATBOX_MAX_LENGTH} characters"
+                "repeat message must contain characters"
             )));
         }
     }
@@ -136,24 +133,4 @@ pub fn get_repeat_status() -> IResult<RepeatStatus> {
         Some(task) => RepeatStatus::actived(task.messages().to_vec()),
         None => RepeatStatus::stopped(None),
     })
-}
-
-pub fn write_template_list(items: Vec<ChatboxTemplateDto>) -> IResult<()> {
-    if items.len() > TEMPLATE_MAX_SIZE {
-        return Err(IError::Chatbox(format!(
-            "template list cannot contain more than {TEMPLATE_MAX_SIZE} items"
-        )));
-    }
-    let contents = serde_json::to_vec_pretty(&items)
-        .map_err(|e| IError::Chatbox(format!("serialize template list failed,err={e:?}")))?;
-    file_system::write_config_file(TEMPLATE_LIST_FILE, contents)
-}
-
-pub fn get_template_list() -> IResult<Vec<ChatboxTemplateDto>> {
-    let file_contents = file_system::read_config_file(TEMPLATE_LIST_FILE)?;
-    if file_contents.is_empty() {
-        return Ok(vec![]);
-    }
-    serde_json::from_slice::<Vec<ChatboxTemplateDto>>(&file_contents)
-        .map_err(|e| IError::Chatbox(format!("parse template list failed , err={e:?}")))
 }

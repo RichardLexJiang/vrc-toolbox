@@ -27,12 +27,13 @@ impl ChatboxHistoryDto {
     }
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Default, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ChatboxTemplateDto {
     #[serde(default)]
-    pub name: String,
+    name: String,
     content: String,
+    // display_duration_seconds: usize,
 }
 
 #[derive(Default)]
@@ -132,6 +133,39 @@ impl DynamicVariableDescription {
             example_value: example_value.into(),
             description: description.into(),
         }
+    }
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct PlayContext {
+    totle_tick: usize,
+    template_tick: usize,
+    is_repeating: bool,
+}
+
+impl PlayContext {
+    pub fn totle_tick(&self) -> usize {
+        self.totle_tick
+    }
+
+    pub fn template_tick(&self) -> usize {
+        self.template_tick
+    }
+
+    pub fn totle_tick_mut(&mut self) -> &mut usize {
+        &mut self.totle_tick
+    }
+
+    pub fn template_tick_mut(&mut self) -> &mut usize {
+        &mut self.template_tick
+    }
+
+    pub fn is_repeating_mut(&mut self) -> &mut bool {
+        &mut self.is_repeating
+    }
+
+    pub fn is_repeating(&self) -> bool {
+        self.is_repeating
     }
 }
 

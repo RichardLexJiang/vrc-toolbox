@@ -1450,6 +1450,16 @@ p {
   font-size: 13px;
 }
 
+.preview-box-error .preview-message {
+  color: #b45b63;
+}
+
+.preview-footnote {
+  margin: 6px 0 0;
+  color: #9c98a2;
+  font-size: 9px;
+}
+
 .composer-actions,
 .settings-actions {
   display: flex;
@@ -1579,6 +1589,12 @@ p {
   padding: 16px;
 }
 
+.dynamic-variables-card {
+  min-width: 0;
+  padding: 16px;
+  margin-bottom: 17px;
+}
+
 .history-heading {
   display: flex;
   flex-wrap: wrap;
@@ -1636,6 +1652,71 @@ p {
   margin-top: 3px;
   color: #9c99a2;
   font-size: 9px;
+}
+
+.dynamic-variable-count {
+  margin-left: auto;
+  color: #7c66b3;
+  font-size: 8px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.dynamic-variable-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  gap: 8px;
+}
+
+.dynamic-variable-item {
+  padding: 9px;
+  border: 1px solid #efebf5;
+  border-radius: 8px;
+  background: #fcfbfd;
+}
+
+.dynamic-variable-item-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 7px;
+}
+
+.dynamic-variable-token {
+  padding: 4px 6px;
+  border: 1px solid #e6dff0;
+  border-radius: 5px;
+  color: #6f58a2;
+  background: #f3eff8;
+  font: 600 9px/1.3 "Consolas", "Courier New", monospace;
+  cursor: grab;
+}
+
+.dynamic-variable-token:active {
+  cursor: grabbing;
+}
+
+.dynamic-variable-token:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.dynamic-variable-item-heading > span {
+  color: #98939f;
+  font-size: 8px;
+}
+
+.dynamic-variable-item-heading code {
+  color: #625a6d;
+  font: 600 8px "Consolas", "Courier New", monospace;
+}
+
+.dynamic-variable-item p {
+  margin: 7px 0 0;
+  color: #85808c;
+  font-size: 8px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
 }
 
 .history-count {
@@ -3186,6 +3267,39 @@ p {
 
 .app-shell[data-theme="dark"] .preview-message {
   color: #d0cbd7;
+}
+
+.app-shell[data-theme="dark"] .preview-box-error .preview-message,
+.app-shell[data-theme="dark"] .history-error {
+  color: #e29a9e;
+}
+
+.app-shell[data-theme="dark"] .preview-footnote,
+.app-shell[data-theme="dark"] .dynamic-variable-item-heading > span {
+  color: #a09ba9;
+}
+
+.app-shell[data-theme="dark"] .dynamic-variable-count {
+  color: #c4b2ef;
+}
+
+.app-shell[data-theme="dark"] .dynamic-variable-item {
+  border-color: #393642;
+  background: #1c1b22;
+}
+
+.app-shell[data-theme="dark"] .dynamic-variable-token {
+  border-color: #51466a;
+  color: #d4c7f5;
+  background: #332d42;
+}
+
+.app-shell[data-theme="dark"] .dynamic-variable-item-heading code {
+  color: #d0cbd7;
+}
+
+.app-shell[data-theme="dark"] .dynamic-variable-item p {
+  color: #aaa5b3;
 }
 
 .app-shell[data-theme="dark"] .history-tabs {

@@ -12,6 +12,12 @@ type ChatboxHistoryItem = {
   sendTime: number;
 };
 type ChatboxTemplate = { name: string; content: string };
+type DynamicVariableDescription = {
+  token: string;
+  exampleValue: string;
+  description: string;
+};
+const CHATBOX_SOURCE_MAX_LENGTH = 200;
 type ChatboxRepeatStatus = {
   active: boolean;
   messages: string[] | null;
@@ -145,10 +151,13 @@ function App() {
   const [isSending, setIsSending] = useState(false);
   const [chatboxHistory, setChatboxHistory] = useState<ChatboxHistoryItem[]>([]);
   const [chatboxTemplates, setChatboxTemplates] = useState<ChatboxTemplate[]>([]);
+  const [dynamicVariables, setDynamicVariables] = useState<DynamicVariableDescription[]>([]);
   const [isHistoryLoading, setIsHistoryLoading] = useState(false);
   const [historyError, setHistoryError] = useState("");
   const [isTemplatesLoading, setIsTemplatesLoading] = useState(false);
   const [templatesError, setTemplatesError] = useState("");
+  const [isDynamicVariablesLoading, setIsDynamicVariablesLoading] = useState(false);
+  const [dynamicVariablesError, setDynamicVariablesError] = useState("");
   const [isTemplateSaving, setIsTemplateSaving] = useState(false);
   const [repeatStatus, setRepeatStatus] = useState<ChatboxRepeatStatus>({
     active: false,
@@ -234,6 +243,8 @@ function App() {
     setHistoryError("");
     setIsTemplatesLoading(true);
     setTemplatesError("");
+    setIsDynamicVariablesLoading(true);
+    setDynamicVariablesError("");
     getChatboxHistory()
       .then((history) => {
         if (!cancelled) setChatboxHistory(history);
@@ -253,6 +264,16 @@ function App() {
       })
       .finally(() => {
         if (!cancelled) setIsTemplatesLoading(false);
+      });
+    invoke<DynamicVariableDescription[]>("supported_dynamic_var_list")
+      .then((variables) => {
+        if (!cancelled) setDynamicVariables(variables);
+      })
+      .catch((error: unknown) => {
+        if (!cancelled) setDynamicVariablesError(`Could not load supported variables: ${errorMessage(error)}`);
+      })
+      .finally(() => {
+        if (!cancelled) setIsDynamicVariablesLoading(false);
       });
 
     return () => {
@@ -297,6 +318,10 @@ function App() {
     const trimmedName = name.trim();
     const trimmedContent = content.trim();
     if (!trimmedContent) return;
+    if (trimmedContent.length > CHATBOX_SOURCE_MAX_LENGTH) {
+      showNotice(`Template content must be no more than ${CHATBOX_SOURCE_MAX_LENGTH} characters.`);
+      return;
+    }
     if (!trimmedName || trimmedName.length > 40) {
       showNotice("Template names must be between 1 and 40 characters.");
       return;
@@ -346,8 +371,8 @@ function App() {
       showNotice("Template names must be between 1 and 40 characters.");
       return false;
     }
-    if (!trimmedContent || trimmedContent.length > 144) {
-      showNotice("Template content must be between 1 and 144 characters.");
+    if (!trimmedContent || trimmedContent.length > CHATBOX_SOURCE_MAX_LENGTH) {
+      showNotice(`Template content must be between 1 and ${CHATBOX_SOURCE_MAX_LENGTH} characters.`);
       return false;
     }
     if (chatboxTemplates.some((template, templateIndex) => templateIndex !== index && template.name.toLowerCase() === trimmedName.toLowerCase())) {
@@ -466,6 +491,9 @@ function App() {
               templates={chatboxTemplates}
               isTemplatesLoading={isTemplatesLoading}
               templatesError={templatesError}
+              dynamicVariables={dynamicVariables}
+              isDynamicVariablesLoading={isDynamicVariablesLoading}
+              dynamicVariablesError={dynamicVariablesError}
               isTemplateSaving={isTemplateSaving}
               repeatStatus={repeatStatus}
               onSaveTemplate={saveTemplate}
@@ -552,6 +580,9 @@ function ChatboxPage({
   templates,
   isTemplatesLoading,
   templatesError,
+  dynamicVariables,
+  isDynamicVariablesLoading,
+  dynamicVariablesError,
   isTemplateSaving,
   repeatStatus,
   onSaveTemplate,
@@ -571,6 +602,9 @@ function ChatboxPage({
   templates: ChatboxTemplate[];
   isTemplatesLoading: boolean;
   templatesError: string;
+  dynamicVariables: DynamicVariableDescription[];
+  isDynamicVariablesLoading: boolean;
+  dynamicVariablesError: string;
   isTemplateSaving: boolean;
   repeatStatus: ChatboxRepeatStatus;
   onSaveTemplate: (name: string, content: string) => void;
@@ -588,8 +622,51 @@ function ChatboxPage({
   const [editIndex, setEditIndex] = useState<number | null>(null);
   const [editNameDraft, setEditNameDraft] = useState("");
   const [editContentDraft, setEditContentDraft] = useState("");
+  const [previewMessage, setPreviewMessage] = useState("");
+  const [previewError, setPreviewError] = useState("");
+  const [isPreviewLoading, setIsPreviewLoading] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const activeEmojiCategory = emojiCategories.find((category) => category.label === emojiCategory) ?? emojiCategories[0];
+
+  useEffect(() => {
+    if (!message) {
+      setPreviewMessage("");
+      setPreviewError("");
+      setIsPreviewLoading(false);
+      return;
+    }
+
+    if (!isDesktop) {
+      setPreviewMessage(message);
+      setPreviewError("");
+      setIsPreviewLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    setIsPreviewLoading(true);
+    setPreviewError("");
+    const timeout = window.setTimeout(() => {
+      invoke<string>("preview_message", { message })
+        .then((preview) => {
+          if (!cancelled) setPreviewMessage(preview);
+        })
+        .catch((error: unknown) => {
+          if (!cancelled) {
+            setPreviewMessage("");
+            setPreviewError(errorMessage(error));
+          }
+        })
+        .finally(() => {
+          if (!cancelled) setIsPreviewLoading(false);
+        });
+    }, 200);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timeout);
+    };
+  }, [isDesktop, message]);
 
   useEffect(() => {
     setSelectedRepeatIndices(new Set());
@@ -600,24 +677,24 @@ function ChatboxPage({
     .map((index) => templates[index]?.content)
     .filter((content): content is string => content !== undefined);
 
-  function insertEmoji(emoji: string) {
+  function insertTextAtCursor(text: string) {
     const textarea = textareaRef.current;
     if (!textarea) return;
 
     const start = textarea.selectionStart;
     const end = textarea.selectionEnd;
-    const availableLength = 144 - (textarea.value.length - (end - start));
-    let insertedEmoji = "";
-    for (const character of emoji) {
-      if (insertedEmoji.length + character.length > availableLength) break;
-      insertedEmoji += character;
+    const availableLength = CHATBOX_SOURCE_MAX_LENGTH - (textarea.value.length - (end - start));
+    let insertedText = "";
+    for (const character of text) {
+      if (insertedText.length + character.length > availableLength) break;
+      insertedText += character;
     }
-    if (!insertedEmoji) return;
+    if (!insertedText) return;
 
-    setMessage(`${textarea.value.slice(0, start)}${insertedEmoji}${textarea.value.slice(end)}`);
+    setMessage(`${textarea.value.slice(0, start)}${insertedText}${textarea.value.slice(end)}`);
     window.requestAnimationFrame(() => {
       textarea.focus();
-      const cursorPosition = start + insertedEmoji.length;
+      const cursorPosition = start + insertedText.length;
       textarea.setSelectionRange(cursorPosition, cursorPosition);
     });
   }
@@ -625,27 +702,87 @@ function ChatboxPage({
   return (
     <>
       <PageIntro eyebrow="BUILT-IN TOOL · 01" title="Chatbox" description="Compose a quick note, revisit a recent message, and send it straight to your VRChat chatbox." />
+      <section className="content-card dynamic-variables-card" aria-labelledby="dynamic-variables-heading">
+        <div className="history-heading">
+          <span className="section-icon history-icon"><Icon name="sparkles" size={18} /></span>
+          <span>
+            <strong id="dynamic-variables-heading">Dynamic variables</strong>
+            <small>Drag a token into your message</small>
+          </span>
+          {isDesktop && !isDynamicVariablesLoading && !dynamicVariablesError && (
+            <span className="dynamic-variable-count">
+              {dynamicVariables.length} supported
+            </span>
+          )}
+        </div>
+        {!isDesktop ? (
+          <div className="history-empty">Variable list is available in the desktop app.</div>
+        ) : dynamicVariablesError ? (
+          <div className="history-empty history-error" role="status">{dynamicVariablesError}</div>
+        ) : isDynamicVariablesLoading ? (
+          <div className="history-empty" role="status">Loading supported variables…</div>
+        ) : dynamicVariables.length === 0 ? (
+          <div className="history-empty">No dynamic variables are available.</div>
+        ) : (
+          <div className="dynamic-variable-list">
+            {dynamicVariables.map((variable) => (
+              <article className="dynamic-variable-item" key={variable.token}>
+                <div className="dynamic-variable-item-heading">
+                  <button
+                    className="dynamic-variable-token"
+                    type="button"
+                    draggable={!isSending}
+                    onClick={() => insertTextAtCursor(variable.token)}
+                    onDragStart={(event) => {
+                      event.dataTransfer.setData("text/plain", variable.token);
+                      event.dataTransfer.effectAllowed = "copy";
+                    }}
+                    disabled={isSending}
+                    title={`Insert ${variable.token}`}
+                  >
+                    {variable.token}
+                  </button>
+                  <span>e.g. <code>{variable.exampleValue}</code></span>
+                </div>
+                <p>{variable.description}</p>
+              </article>
+            ))}
+          </div>
+        )}
+      </section>
       <div className="chat-layout">
         <section className="content-card composer-card">
           <div className="content-card-header"><span className="section-icon lilac-icon"><Icon name="message" size={19} /></span><span><strong>Compose a message</strong><small>Keep it short and unmistakably you</small></span><span className="preview-label"><span /> LIVE PREVIEW</span></div>
           <form onSubmit={onSubmit}>
-            <label className="field-label" htmlFor="chat-message">YOUR MESSAGE <span>UP TO 144 CHARACTERS</span></label>
+            <label className="field-label" htmlFor="chat-message">YOUR MESSAGE <span>UP TO {CHATBOX_SOURCE_MAX_LENGTH} CHARACTERS</span></label>
             <textarea
               id="chat-message"
               ref={textareaRef}
               value={message}
-              onChange={(event) => setMessage(event.currentTarget.value.slice(0, 144))}
+              onChange={(event) => setMessage(event.currentTarget.value.slice(0, CHATBOX_SOURCE_MAX_LENGTH))}
               onKeyDown={(event) => {
                 if (event.key === "Enter" && event.shiftKey && !event.nativeEvent.isComposing) {
                   event.preventDefault();
                   event.currentTarget.form?.requestSubmit();
                 }
               }}
+              onDragOver={(event) => {
+                if (event.dataTransfer.types.includes("text/plain")) {
+                  event.preventDefault();
+                  event.dataTransfer.dropEffect = "copy";
+                }
+              }}
+              onDrop={(event) => {
+                const token = event.dataTransfer.getData("text/plain");
+                if (!token) return;
+                event.preventDefault();
+                insertTextAtCursor(token);
+              }}
               placeholder="What would you like to say?"
-              maxLength={144}
+              maxLength={CHATBOX_SOURCE_MAX_LENGTH}
               disabled={isSending}
             />
-            <div className="textarea-meta"><span>Enter for a new line · <kbd>Shift</kbd> + <kbd>Enter</kbd> to send</span><span>{message.length} / 144</span></div>
+            <div className="textarea-meta"><span>Enter for a new line · <kbd>Shift</kbd> + <kbd>Enter</kbd> to send</span><span>{message.length} / {CHATBOX_SOURCE_MAX_LENGTH}</span></div>
             <div className="emoji-toolbar">
               <button
                 className="emoji-picker-toggle"
@@ -683,7 +820,7 @@ function ChatboxPage({
                       type="button"
                       aria-label={`Insert ${emoji} emoji`}
                       title={`Insert ${emoji}`}
-                      onClick={() => insertEmoji(emoji)}
+                      onClick={() => insertTextAtCursor(emoji)}
                       disabled={isSending}
                     >
                       {emoji}
@@ -692,7 +829,18 @@ function ChatboxPage({
                 </div>
               </div>
             )}
-            <div className="preview-box"><span className="preview-avatar">Y</span><span className="preview-message">{message || "Your message will appear here…"}</span><span className="preview-stars">✦</span></div>
+            <div className={`preview-box ${previewError ? "preview-box-error" : ""}`}>
+              <span className="preview-avatar">Y</span>
+              <span className="preview-message" aria-live="polite">
+                {isPreviewLoading
+                  ? "Rendering preview…"
+                  : previewError
+                    ? `Preview unavailable: ${previewError}`
+                    : previewMessage || "Your message will appear here…"}
+              </span>
+              <span className="preview-stars">✦</span>
+            </div>
+            {!isDesktop && <p className="preview-footnote">Dynamic preview is available in the desktop app.</p>}
             <div className="composer-actions">
               <span className="backend-hint"><span className="status-dot" /> {isDesktop ? "Send to your VRChat chatbox" : "Sending available in the desktop app"}</span>
               <div className="composer-action-buttons">
@@ -787,7 +935,7 @@ function ChatboxPage({
                       </div>
                       <span className="history-item-content">{template.content}</span>
                       <div className="template-item-actions">
-                        <button type="button" onClick={() => setMessage(template.content.slice(0, 144))} disabled={isSending || isTemplateSaving}>Use</button>
+                        <button type="button" onClick={() => setMessage(template.content.slice(0, CHATBOX_SOURCE_MAX_LENGTH))} disabled={isSending || isTemplateSaving}>Use</button>
                         <button type="button" onClick={() => {
                           if (editIndex === index) {
                             setEditIndex(null);
@@ -814,17 +962,17 @@ function ChatboxPage({
                             onChange={(event) => setEditNameDraft(event.currentTarget.value)}
                             autoFocus
                           />
-                          <label htmlFor={`template-edit-content-${index}`}>MESSAGE <span>{editContentDraft.length} / 144</span></label>
+                          <label htmlFor={`template-edit-content-${index}`}>MESSAGE <span>{editContentDraft.length} / {CHATBOX_SOURCE_MAX_LENGTH}</span></label>
                           <textarea
                             id={`template-edit-content-${index}`}
-                            maxLength={144}
+                            maxLength={CHATBOX_SOURCE_MAX_LENGTH}
                             value={editContentDraft}
-                            onChange={(event) => setEditContentDraft(event.currentTarget.value.slice(0, 144))}
+                            onChange={(event) => setEditContentDraft(event.currentTarget.value.slice(0, CHATBOX_SOURCE_MAX_LENGTH))}
                             rows={3}
                           />
                           <div className="template-edit-actions">
                             <button type="button" onClick={() => setEditIndex(null)} disabled={isTemplateSaving}>Cancel</button>
-                            <button type="submit" disabled={!editNameDraft.trim() || !editContentDraft.trim() || editContentDraft.length > 144 || isTemplateSaving}>
+                            <button type="submit" disabled={!editNameDraft.trim() || !editContentDraft.trim() || editContentDraft.length > CHATBOX_SOURCE_MAX_LENGTH || isTemplateSaving}>
                               {isTemplateSaving ? "Saving…" : "Save changes"}
                             </button>
                           </div>
@@ -849,7 +997,7 @@ function ChatboxPage({
                     className="history-item"
                     key={`${item.sendTime}-${index}`}
                     type="button"
-                    onClick={() => setMessage(item.originContent.slice(0, 144))}
+                    onClick={() => setMessage(item.originContent.slice(0, CHATBOX_SOURCE_MAX_LENGTH))}
                     disabled={isSending}
                     title="Use this message"
                   >

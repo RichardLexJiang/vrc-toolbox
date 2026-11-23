@@ -31,7 +31,22 @@ The app uses the standard local OSC address, `127.0.0.1:9000`, by default. If yo
 
 ### Chatbox
 
-Write a message of up to 144 characters and click **Send message**. Press **Shift+Enter** as a shortcut when composing.
+Write a source message of up to 200 characters and click **Send message**. Press **Shift+Enter** as a shortcut when composing. The 200-character limit applies to the message text before dynamic variables are rendered; rendered/send behavior is unchanged.
+
+Dynamic variables can be added to messages using `${...}` tokens. The supported variables are:
+
+| Token | Description |
+| --- | --- |
+| `${cpu_usage}` | Overall CPU usage as a percentage. |
+| `${memory_usage}` | Used physical memory as a percentage of total RAM. |
+| `${total_ram}` | Total physical RAM in GiB. |
+| `${used_ram}` | Used physical RAM in GiB. |
+| `${local_time}` | Current local time in `HH:MM` format. |
+| `${local_time("%Y-%m-%d %H:%M:%S")}` | Current local time in a custom [Chrono `strftime` format](https://docs.rs/chrono/latest/chrono/format/strftime/index.html). |
+| `${dots}` | Three dots by default; while repeating, cycles from one to three dots. |
+| `${dots(6)}` | Up to six dots; while repeating, cycles from one to six dots. The count must be from 1 to 6. |
+
+Use the **Dynamic variables** list above the composer to see supported tokens and examples. Click a token or drag it into your message to insert it. The preview renders dynamic values in the desktop app.
 
 Recent messages appear in the history panel. Selecting one puts it back in the composer without sending it automatically.
 

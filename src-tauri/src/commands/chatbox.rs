@@ -2,7 +2,8 @@ use crate::{
     application,
     domain::{
         chatbox::{
-            ChatboxHistoryDto, ChatboxTemplateDto, DynamicVariableDescription, RepeatStatus,
+            ChatboxHistoryDto, ChatboxTemplateDto, DynamicVariableDescription, PlayContext,
+            RepeatStatus,
         },
         error::CResult,
     },
@@ -14,18 +15,24 @@ pub async fn send_message(_: tauri::AppHandle, message: String, append_his: bool
 }
 
 #[tauri::command]
+pub async fn preview_message(message: String) -> CResult<String> {
+    application::chatbox::message::render_message(&message, PlayContext::default())
+        .map_err(Into::into)
+}
+
+#[tauri::command]
 pub async fn get_chatbox_history() -> CResult<Vec<ChatboxHistoryDto>> {
     application::chatbox::message::read_history().map_err(Into::into)
 }
 
 #[tauri::command]
 pub async fn get_template_list() -> CResult<Vec<ChatboxTemplateDto>> {
-    application::chatbox::repeator::get_template_list().map_err(Into::into)
+    application::chatbox::templates::get_template_list().map_err(Into::into)
 }
 
 #[tauri::command]
 pub async fn write_template_list(list: Vec<ChatboxTemplateDto>) -> CResult<()> {
-    application::chatbox::repeator::write_template_list(list).map_err(Into::into)
+    application::chatbox::templates::write_template_list(list).map_err(Into::into)
 }
 
 #[tauri::command]

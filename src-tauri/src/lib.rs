@@ -10,9 +10,10 @@ use tauri::{App, Manager};
 use crate::{
     adapters::file_system::init_config_dir,
     commands::{
+        avatar::{change_avatar_height, get_avatar_height_values, save_avatar_height_values},
         chatbox::{
-            get_chatbox_history, get_chatbox_repeat_status, get_template_list, send_message,
-            start_chatbox_repeat, stop_chatbox_repeat, supported_dynamic_var_list,
+            get_chatbox_history, get_chatbox_repeat_status, get_template_list, preview_message,
+            send_message, start_chatbox_repeat, stop_chatbox_repeat, supported_dynamic_var_list,
             write_template_list,
         },
         settings::{get_connection_status, get_local_settings, save_local_settings},
@@ -29,6 +30,7 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![
             send_message,
+            preview_message,
             get_connection_status,
             get_local_settings,
             save_local_settings,
@@ -39,9 +41,9 @@ pub fn run() {
             stop_chatbox_repeat,
             get_chatbox_repeat_status,
             supported_dynamic_var_list,
-            commands::avatar::change_avatar_height,
-            commands::avatar::get_avatar_height_values,
-            commands::avatar::save_avatar_height_values,
+            change_avatar_height,
+            get_avatar_height_values,
+            save_avatar_height_values,
         ])
         .manage(Mutex::new(ConnectionStatus::default()))
         .setup(|app| Ok(init(app).map_err(Box::new)?))
