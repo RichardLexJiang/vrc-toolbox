@@ -137,13 +137,14 @@ impl DynamicVariableDescription {
 }
 
 #[derive(Debug, Clone, Default)]
-pub struct PlayContext {
+pub struct RenderContext {
     totle_tick: usize,
     template_tick: usize,
     is_repeating: bool,
+    arguments: Vec<String>,
 }
 
-impl PlayContext {
+impl RenderContext {
     pub fn totle_tick(&self) -> usize {
         self.totle_tick
     }
@@ -166,6 +167,14 @@ impl PlayContext {
 
     pub fn is_repeating(&self) -> bool {
         self.is_repeating
+    }
+
+    pub fn arguments(&self) -> &[String] {
+        &self.arguments
+    }
+
+    pub fn arguments_mut(&mut self) -> &mut Vec<String> {
+        &mut self.arguments
     }
 }
 

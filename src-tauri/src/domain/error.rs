@@ -17,17 +17,20 @@ pub struct CommandError {
 
 #[derive(Debug)]
 pub enum IError {
-    Unknow(String),                         // 10000
-    Settings(String),                       // 10100
-    VrcOscApi(String),                      // 10200
-    VrcOscClientLock(String),               // 10201
-    VrcOscClientInit(String),               // 10202
-    FileOperate(String),                    // 10300
-    Chatbox(String),                        // 10400
-    DynamicVariablePArgumentsError(String), // 10401
-    Avatar(String),                         // 10500
-    SystemInfo(String),                     // 10600
-    Tauri(String),                          // 11000
+    Unknow(String),                            // 10000
+    Settings(String),                          // 10100
+    VrcOscApi(String),                         // 10200
+    VrcOscClientLock(String),                  // 10201
+    VrcOscClientInit(String),                  // 10202
+    FileOperate(String),                       // 10300
+    Chatbox(String),                           // 10400
+    Avatar(String),                            // 10500
+    SystemInfo(String),                        // 10600
+    DynamicVariable(String),                   // 10700
+    DynamicVariablePArgumentsError(String),    // 10701
+    DynamicVariableRegistryLockFailed(String), // 10702
+    DynamicVariableProviderNotExist(String),   // 10703
+    Tauri(String),                             // 11000
 }
 
 impl From<IError> for CommandError {
@@ -38,12 +41,15 @@ impl From<IError> for CommandError {
             IError::VrcOscApi(msg) => ("10200", msg),
             IError::VrcOscClientLock(msg) => ("10201", msg),
             IError::VrcOscClientInit(msg) => ("10202", msg),
-            IError::Tauri(msg) => ("11000", msg),
             IError::FileOperate(msg) => ("10300", msg),
             IError::Chatbox(msg) => ("10400", msg),
-            IError::DynamicVariablePArgumentsError(msg) => ("10401", msg),
             IError::Avatar(msg) => ("10500", msg),
             IError::SystemInfo(msg) => ("10600", msg),
+            IError::DynamicVariable(msg) => ("10700", msg),
+            IError::DynamicVariablePArgumentsError(msg) => ("10701", msg),
+            IError::DynamicVariableRegistryLockFailed(msg) => ("10702", msg),
+            IError::DynamicVariableProviderNotExist(msg) => ("10703", msg),
+            IError::Tauri(msg) => ("11000", msg),
         };
         Self { code, message }
     }

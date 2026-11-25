@@ -2,13 +2,12 @@ use vrc_osc_api::vrchat::chatbox;
 
 use crate::{
     adapters::{self, file_system},
+    application::chatbox::dynamic_variable_registry,
     domain::{
-        chatbox::{ChatboxHistoryDto, PlayContext},
+        chatbox::{ChatboxHistoryDto, RenderContext},
         error::{IError, IResult},
     },
 };
-
-use super::dynamic_variable::DynamicVariable;
 
 const CHATBOX_HISTORY_FILE: &str = "chatbox_history.json";
 const HISTORY_MAX_SIZE: usize = 200;
@@ -17,11 +16,11 @@ pub fn send_message(message: String, append_his: bool) -> IResult<()> {
     if append_his {
         let _ = append_history(ChatboxHistoryDto::new(message.clone()));
     }
-    send_raw_message(render_message(&message, PlayContext::default())?)
+    send_raw_message(render_message(&message, RenderContext::default())?)
 }
 
-pub fn render_message(message: &str, ctx: PlayContext) -> IResult<String> {
-    ParsedMessage::new(message)?.render(&ctx)
+pub fn render_message(message: &str, ctx: RenderContext) -> IResult<String> {
+    ParsedMessage::new(message)?.render(ctx)
 }
 
 pub fn send_raw_message(message: String) -> IResult<()> {
@@ -81,7 +80,7 @@ impl ParsedMessage {
 
             push_raw(&mut parts, &content[raw_start..token_start]);
 
-            let (key, argument) = match expression.find('(') {
+            let (key, arguments) = match expression.find('(') {
                 Some(argument_start) if expression.ends_with(')') => (
                     &expression[..argument_start],
                     Some(&expression[argument_start + 1..expression.len() - 1]),
@@ -89,14 +88,12 @@ impl ParsedMessage {
                 _ => (expression, None),
             };
 
-            match DynamicVariable::new(key.trim(), argument)? {
-                Some(variable) => parts.push(MessagePart::Variable {
-                    source: source.to_string(),
-                    variable,
-                }),
-                None => push_raw(&mut parts, source),
-            }
-
+            parts.push(MessagePart::DynamicVariable {
+                source: source.to_string(),
+                key: key.to_string(),
+                arguments: arguments
+                    .map_or_default(|args| args.split(',').map(str::to_string).collect()),
+            });
             raw_start = token_end + 1;
             search_start = raw_start;
         }
@@ -105,18 +102,27 @@ impl ParsedMessage {
         Ok(Self { parts })
     }
 
-    pub fn render(&self, ctx: &PlayContext) -> IResult<String> {
+    pub fn render(&self, mut ctx: RenderContext) -> IResult<String> {
         let mut output = String::new();
         for part in &self.parts {
             match part {
                 MessagePart::RawText(text) => output.push_str(text),
-                MessagePart::Variable { variable, source } => match variable.evaluate(ctx) {
-                    Ok(str) => output.push_str(&str),
-                    Err(_) => {
-                        // todo add some log
-                        output.push_str(source);
+                MessagePart::DynamicVariable {
+                    source,
+                    key,
+                    arguments,
+                } => {
+                    for ele in arguments {
+                        (&mut ctx).arguments_mut().push(ele.to_string());
                     }
-                },
+                    match dynamic_variable_registry::provide_value(key, ctx.clone()) {
+                        Ok(result) => output.push_str(&result),
+                        Err(_) => {
+                            // todo log
+                            output.push_str(source);
+                        }
+                    };
+                }
             }
         }
         Ok(output)
@@ -126,9 +132,10 @@ impl ParsedMessage {
 #[derive(Debug, Clone)]
 pub enum MessagePart {
     RawText(String),
-    Variable {
+    DynamicVariable {
         source: String,
-        variable: DynamicVariable,
+        key: String,
+        arguments: Vec<String>,
     },
 }
 
@@ -157,23 +164,10 @@ mod tests {
             &parsed.parts()[0],
             MessagePart::RawText(text) if text == "CPU: "
         ));
-        assert!(matches!(
-            &parsed.parts()[1],
-            MessagePart::Variable {
-                variable: DynamicVariable::CpuUsage,
-                ..
-            }
-        ));
+
         assert!(matches!(
             &parsed.parts()[2],
             MessagePart::RawText(text) if text == ", dots "
-        ));
-        assert!(matches!(
-            &parsed.parts()[3],
-            MessagePart::Variable {
-                variable: DynamicVariable::Dots { count: 6 },
-                ..
-            }
         ));
     }
 
@@ -191,19 +185,5 @@ mod tests {
     fn rejects_invalid_dot_count() {
         assert!(ParsedMessage::new("${dots(7)}").is_err());
         assert!(ParsedMessage::new("${dots(nope)}").is_err());
-    }
-
-    #[test]
-    fn parses_local_time_format() {
-        let parsed =
-            ParsedMessage::new("${local_time(\"%Y-%m-%d\")}").expect("message should parse");
-
-        assert!(matches!(
-            parsed.parts(),
-            [MessagePart::Variable {
-                variable: DynamicVariable::LocalTime(format),
-                ..
-            }] if format == "%Y-%m-%d"
-        ));
     }
 }

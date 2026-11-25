@@ -2,7 +2,7 @@ use crate::{
     application,
     domain::{
         chatbox::{
-            ChatboxHistoryDto, ChatboxTemplateDto, DynamicVariableDescription, PlayContext,
+            ChatboxHistoryDto, ChatboxTemplateDto, DynamicVariableDescription, RenderContext,
             RepeatStatus,
         },
         error::CResult,
@@ -16,7 +16,7 @@ pub async fn send_message(_: tauri::AppHandle, message: String, append_his: bool
 
 #[tauri::command]
 pub async fn preview_message(message: String) -> CResult<String> {
-    application::chatbox::message::render_message(&message, PlayContext::default())
+    application::chatbox::message::render_message(&message, RenderContext::default())
         .map_err(Into::into)
 }
 
@@ -55,5 +55,6 @@ pub async fn get_chatbox_repeat_status() -> CResult<RepeatStatus> {
 
 #[tauri::command]
 pub async fn supported_dynamic_var_list() -> CResult<Vec<DynamicVariableDescription>> {
-    Ok(application::chatbox::dynamic_variable::supported_dynamic_var_list())
+    application::chatbox::dynamic_variable_registry::supported_dynamic_var_list()
+        .map_err(Into::into)
 }
